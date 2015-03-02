@@ -18,6 +18,7 @@ import org.aopalliance.intercept.MethodInvocation;
 import org.apache.commons.beanutils.MethodUtils;
 import rx.Observable;
 import rx.functions.Func1;
+import rx.schedulers.Schedulers;
 
 import javax.inject.Inject;
 import java.lang.annotation.Annotation;
@@ -41,7 +42,8 @@ public class GugisReplicatorInterceptor implements MethodInterceptor {
             log.debug("Method " + i.getMethod() + " is called on " + i.getThis() + " with args " + i.getArguments());
         }
 
-        Propagate propagate = i.getMethod().getDeclaredAnnotation(Propagate.class);
+        Propagate propagate = i.getMethod().getAnnotation(Propagate.class);
+
         Class clazz = i.getMethod().getDeclaringClass().getInterfaces()[0];
 
         if (log.isDebugEnabled()) {
@@ -61,7 +63,7 @@ public class GugisReplicatorInterceptor implements MethodInterceptor {
             log.debug("Found " + bindings.size() + " bindings for " + clazz);
         }
 
-//        Stream<Try<Object>> resultStream = Stream.empty();
+
         Observable<Try<Object>> resultsObservable = null;
         switch (propagate.propagation()) {
             case FASTEST: {
@@ -138,7 +140,7 @@ public class GugisReplicatorInterceptor implements MethodInterceptor {
 
     public Observable<Try<Object>> executeBindings(final boolean allowFailure, Observable<Binding<Object>> bindings, final String methodName, final Object[] arguments) {
 
-        Observable<Try<Object>> executedBindingsObservable = bindings.map(new Func1<Binding<Object>, Try<Object>>() {
+        Observable<Try<Object>> executedBindingsObservable = bindings.subscribeOn(Schedulers.computation()).map(new Func1<Binding<Object>, Try<Object>>() {
             @Override
             public Try<Object> call(Binding<Object> binding) {
                 try {

@@ -9,7 +9,7 @@
  */
 package com.github.lukaszbudnik.gugis;
 
-public class Failure<T> implements Try<T> {
+public class Failure<T> extends Try<T> {
 
     private Throwable failure;
 

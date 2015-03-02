@@ -15,13 +15,13 @@ import com.google.inject.matcher.Matchers;
 import com.google.inject.multibindings.Multibinder;
 import lombok.extern.slf4j.Slf4j;
 import org.atteo.classindex.ClassIndex;
+import rx.Observable;
+import rx.functions.Func1;
 
 import java.lang.annotation.Annotation;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
 
 @Slf4j
 public class GugisModule extends AbstractModule {
@@ -94,32 +94,43 @@ public class GugisModule extends AbstractModule {
 
     }
 
-    private List<String> getMethodsMarkedWithPropagation(Class<?> compositeClass, Propagation propagation) {
-        return Stream.of(compositeClass.getMethods())
-                .filter(m -> {
-                    Propagate propagate = m.getAnnotation(Propagate.class);
-                    if (propagate == null) {
-                        return false;
-                    }
-                    if (propagate.propagation() == propagation) {
-                        return true;
-                    }
+    private List<String> getMethodsMarkedWithPropagation(final Class<?> compositeClass, final Propagation propagation) {
+        return Observable.from(compositeClass.getMethods()).filter(new Func1<Method, Boolean>() {
+            @Override
+            public Boolean call(Method method) {
+                Propagate propagate = method.getAnnotation(Propagate.class);
+                if (propagate == null) {
                     return false;
-                })
-                .map(m -> m.toString().replace(compositeClass.getCanonicalName() + ".", ""))
-                .collect(Collectors.toList());
+                }
+                if (propagate.propagation() == propagation) {
+                    return true;
+                }
+                return false;
+            }
+        }).map(new Func1<Method, String>() {
+            @Override
+            public String call(Method method) {
+                return method.toString().replace(compositeClass.getCanonicalName() + ".", "");
+            }
+        }).toList().toBlocking().first();
     }
 
-    private long bind(Multibinder multibinder, Class<?> classInterface, Class<? extends Annotation> annotation) {
-        return StreamSupport.stream(ClassIndex.getAnnotated(annotation).spliterator(), true)
-                .filter(c -> classInterface.isAssignableFrom(c))
-                .map(c -> {
-                    if (log.isDebugEnabled()) {
-                        log.debug("Binding " + c + " to " + classInterface);
-                    }
-                    multibinder.addBinding().to(c);
-                    return true;
-                })
-                .count();
+    private long bind(final Multibinder multibinder, final Class<?> classInterface, Class<? extends Annotation> annotation) {
+
+        return Observable.from(ClassIndex.getAnnotated(annotation)).filter(new Func1<Class<?>, Boolean>() {
+            @Override
+            public Boolean call(Class<?> c) {
+                return classInterface.isAssignableFrom(c);
+            }
+        }).map(new Func1<Class<?>, Boolean>() {
+            @Override
+            public Boolean call(Class<?> c) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Binding " + c + " to " + classInterface);
+                }
+                multibinder.addBinding().to(c);
+                return true;
+            }
+        }).count().toBlocking().first();
     }
 }

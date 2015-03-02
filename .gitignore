@@ -2,8 +2,7 @@
 build/
 .gradle/
 .DS_Store
-guice-multibinding-interceptor.iml
-gugis.iml
+*.iml
 gradle/
 gradlew
 gradlew.bat

@@ -9,7 +9,7 @@
  */
 package com.github.lukaszbudnik.gugis;
 
-public class Success<T> implements Try<T> {
+public class Success<T> extends Try<T> {
 
     private final T result;
 

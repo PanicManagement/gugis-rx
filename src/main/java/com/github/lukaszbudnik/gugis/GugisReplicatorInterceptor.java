@@ -16,12 +16,16 @@ import lombok.extern.slf4j.Slf4j;
 import org.aopalliance.intercept.MethodInterceptor;
 import org.aopalliance.intercept.MethodInvocation;
 import org.apache.commons.beanutils.MethodUtils;
+import rx.Observable;
+import rx.functions.Func1;
 
 import javax.inject.Inject;
+import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationTargetException;
-import java.util.*;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Random;
 
 @Slf4j
 public class GugisReplicatorInterceptor implements MethodInterceptor {
@@ -57,32 +61,44 @@ public class GugisReplicatorInterceptor implements MethodInterceptor {
             log.debug("Found " + bindings.size() + " bindings for " + clazz);
         }
 
-        Stream<Try<Object>> resultStream = Stream.empty();
+//        Stream<Try<Object>> resultStream = Stream.empty();
+        Observable<Try<Object>> resultsObservable = null;
         switch (propagate.propagation()) {
             case FASTEST: {
-                Stream<Try<Object>> executedStream = executeBindings(propagate.allowFailure(), bindings.stream(), i.getMethod().getName(), i.getArguments());
-                Optional<Try<Object>> anyResult = executedStream.filter(t -> t.isSuccess()).findAny();
-                resultStream = anyResult.isPresent() ? Stream.of(anyResult.get()) : Stream.<Try<Object>>empty();
+                Observable<Binding<Object>> bindingsObservable = Observable.from(bindings);
+                Observable<Try<Object>> executedObservable = executeBindings(propagate.allowFailure(), bindingsObservable, i.getMethod().getName(), i.getArguments());
+                resultsObservable = executedObservable.first(new Func1<Try<Object>, Boolean>() {
+                    @Override
+                    public Boolean call(Try<Object> objectTry) {
+                        return objectTry.isSuccess();
+                    }
+                });
                 break;
             }
             case PRIMARY: {
-                Stream<Binding<Object>> filtered = bindings.stream().filter(b -> b.getProvider().get().getClass().isAnnotationPresent(Primary.class));
-                resultStream = executeBindings(propagate.allowFailure(), filtered, i.getMethod().getName(), i.getArguments());
+                resultsObservable = executeRxBindingsForRole(i, bindings, propagate.allowFailure(), Primary.class);
                 break;
             }
             case SECONDARY: {
-                Stream<Binding<Object>> filtered = bindings.stream().filter(b -> b.getProvider().get().getClass().isAnnotationPresent(Secondary.class));
-                resultStream = executeBindings(propagate.allowFailure(), filtered, i.getMethod().getName(), i.getArguments());
+                resultsObservable = executeRxBindingsForRole(i, bindings, propagate.allowFailure(), Secondary.class);
                 break;
             }
             case RANDOM: {
-                ArrayList<Binding<Object>> modifiableBindings = new ArrayList<>(bindings);
+                ArrayList<Binding<Object>> modifiableBindings = new ArrayList<Binding<Object>>(bindings);
                 Collections.shuffle(modifiableBindings);
                 for (Binding<Object> binding : modifiableBindings) {
-                    Stream<Try<Object>> executedStream = executeBindings(propagate.allowFailure(), Stream.of(binding), i.getMethod().getName(), i.getArguments());
-                    Optional<Try<Object>> anyResult = executedStream.filter(t -> t.isSuccess()).findFirst();
-                    if (anyResult.isPresent()) {
-                        resultStream = Stream.of(anyResult.get());
+                    Observable<Binding<Object>> bindingsObservable = Observable.just(binding);
+                    Observable<Try<Object>> executedObservable = executeBindings(propagate.allowFailure(), bindingsObservable, i.getMethod().getName(), i.getArguments());
+
+                    Boolean exists = executedObservable.exists(new Func1<Try<Object>, Boolean>() {
+                        @Override
+                        public Boolean call(Try<Object> objectTry) {
+                            return objectTry.isSuccess();
+                        }
+                    }).toBlocking().first();
+
+                    if (exists) {
+                        resultsObservable = executedObservable;
                         break;
                     }
                 }
@@ -90,47 +106,70 @@ public class GugisReplicatorInterceptor implements MethodInterceptor {
             }
             default: {
                 // handles ALL
-                Stream<Binding<Object>> bindingStream = bindings.stream();
-                resultStream = executeBindings(propagate.allowFailure(), bindingStream, i.getMethod().getName(), i.getArguments());
+                Observable<Binding<Object>> bindingsObservable = Observable.from(bindings);
+                resultsObservable = executeBindings(propagate.allowFailure(), bindingsObservable, i.getMethod().getName(), i.getArguments());
                 break;
             }
         }
 
-        List<Try<Object>> tries = resultStream.collect(Collectors.toList());
+            Observable<Try<Object>> successes = resultsObservable.filter(new Func1<Try<Object>, Boolean>() {
+                @Override
+                public Boolean call(Try<Object> objectTry) {
+                    return objectTry.isSuccess();
+                }
+            });
 
-        List<Try<Object>> successes = tries.stream().filter(t -> t.isSuccess()).collect(Collectors.toList());
+            Integer successesCount = successes.count().toBlocking().first();
 
-        if (successes.size() == 0) {
-            String errorMessage = ErrorMessageBuilder.buildErrorMessageFromTries("No result for " + propagate.propagation() + " found for " + clazz.getCanonicalName() + "." + i.getMethod().getName(), tries);
-            throw new GugisException(errorMessage);
-        }
+            if (successesCount == 0) {
+                String errorMessage = ErrorMessageBuilder.buildErrorMessageFromObservableTries("No result for " + propagate.propagation() + " found for " + clazz.getCanonicalName() + "." + i.getMethod().getName(), resultsObservable);
+                throw new GugisException(errorMessage);
+            }
 
-        // all implementations should be homogeneous and should return same value for same arguments
-        Try<Object> tryObject = successes.get(0);
+            // all implementations should be homogeneous and should return same value for same arguments
+            Try<Object> tryObject = successes.toBlocking().first();
 
-        if (log.isDebugEnabled()) {
-            log.debug("Method " + i.getMethod() + " returns " + tryObject.get());
-        }
+            if (log.isDebugEnabled()) {
+                log.debug("Method " + i.getMethod() + " returns " + tryObject.get());
+            }
 
-        return tryObject.get();
+            return tryObject.get();
     }
 
-    public Stream<Try<Object>> executeBindings(boolean allowFailure, Stream<Binding<Object>> bindings, String methodName, Object[] arguments) {
-        Stream<Try<Object>> executedBindingsStream = bindings.parallel().map(binding -> {
-            try {
-                Object component = binding.getProvider().get();
-                return new Success<Object>(MethodUtils.invokeMethod(component, methodName, arguments));
-            } catch (InvocationTargetException e) {
-                if (!allowFailure) {
-                    // pass the original exception thrown
-                    throw new GugisException(e.getCause());
+    public Observable<Try<Object>> executeBindings(final boolean allowFailure, Observable<Binding<Object>> bindings, final String methodName, final Object[] arguments) {
+
+        Observable<Try<Object>> executedBindingsObservable = bindings.map(new Func1<Binding<Object>, Try<Object>>() {
+            @Override
+            public Try<Object> call(Binding<Object> binding) {
+                try {
+                    Object component = binding.getProvider().get();
+                    return new Success<Object>(MethodUtils.invokeMethod(component, methodName, arguments));
+                } catch (InvocationTargetException e) {
+                    if (!allowFailure) {
+                        // pass the original exception thrown
+                        throw new GugisException(e.getCause());
+                    }
+                    return new Failure<Object>(e.getCause());
+                } catch (Exception e) {
+                    throw new GugisException(e);
                 }
-                return new Failure<Object>(e.getCause());
-            } catch (NoSuchMethodException | IllegalAccessException e) {
-                throw new GugisException(e);
             }
         });
-        return executedBindingsStream;
+
+        return executedBindingsObservable;
+    }
+
+    private Observable<Try<Object>> executeRxBindingsForRole(MethodInvocation i, List<Binding<Object>> bindings, Boolean allowFailure, final Class<? extends Annotation> role) {
+
+        Observable<Binding<Object>> filtered = Observable.from(bindings).filter(new Func1<Binding<Object>, Boolean>() {
+            @Override
+            public Boolean call(Binding<Object> binding) {
+                return binding.getProvider().get().getClass().isAnnotationPresent(role);
+            }
+        });
+
+        Observable<Try<Object>> resultsObservable = executeBindings(allowFailure, filtered, i.getMethod().getName(), i.getArguments());
+        return resultsObservable;
     }
 
 }

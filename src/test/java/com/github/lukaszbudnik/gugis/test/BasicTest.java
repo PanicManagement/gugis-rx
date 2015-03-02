@@ -129,9 +129,7 @@ public class BasicTest {
 
         String result = storageServiceComposite.fastGet(0);
 
-        // all components were called
-        Assert.assertTrue(primary1.wasCalled());
-        Assert.assertTrue(secondary.wasCalled());
+        // primary2 is the fastest
         Assert.assertTrue(primary2.wasCalled());
 
         // the fastest is StorageService3Impl

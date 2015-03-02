@@ -19,5 +19,9 @@ import java.lang.annotation.Target;
 public @interface Propagate {
     Propagation propagation() default Propagation.ALL;
 
+    // default 0 means that there will be
+    // just the original call with no retries at all
+    int retries() default 0;
+
     boolean allowFailure() default false;
 }

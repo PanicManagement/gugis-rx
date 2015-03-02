@@ -9,16 +9,16 @@
  */
 package com.github.lukaszbudnik.gugis;
 
-public interface Try<T> {
+public abstract class Try<T> {
 
-    boolean isSuccess();
+    public abstract boolean isSuccess();
 
-    default boolean isFailure() {
+    public boolean isFailure() {
         return !isSuccess();
     }
 
-    T get();
+    public abstract T get();
 
-    Throwable failure();
+    public abstract Throwable failure();
 
 }

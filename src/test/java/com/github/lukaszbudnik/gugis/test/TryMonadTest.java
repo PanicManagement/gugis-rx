@@ -36,7 +36,7 @@ public class TryMonadTest {
     @Test
     public void failureShouldReturnException() {
         Exception exception = new Exception("test");
-        Try<String> failure = new Failure<>(exception);
+        Try<String> failure = new Failure<String>(exception);
 
         Assert.assertTrue(failure.isFailure());
         Assert.assertFalse(failure.isSuccess());
@@ -46,7 +46,7 @@ public class TryMonadTest {
     @Test(expected = IllegalStateException.class)
     public void successShouldThrowIllegalStateWhenAccessingGet() {
         Exception exception = new Exception("test");
-        Try<String> failure = new Failure<>(exception);
+        Try<String> failure = new Failure<String>(exception);
 
         failure.get();
     }

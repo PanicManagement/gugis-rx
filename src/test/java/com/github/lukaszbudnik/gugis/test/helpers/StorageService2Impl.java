@@ -41,7 +41,7 @@ public class StorageService2Impl extends AbstractTestService implements StorageS
     public String fastGet(int id) {
         log.trace(this.getClass().getSimpleName() + ".fastGet = " + id);
         try {
-            Thread.sleep(750);
+            Thread.sleep(1000);
         } catch (InterruptedException e) {
         }
         called();

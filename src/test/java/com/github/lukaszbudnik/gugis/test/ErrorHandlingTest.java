@@ -126,7 +126,6 @@ public class ErrorHandlingTest {
         int result = queueServiceComposite.stats();
 
         Assert.assertTrue(primary1.wasCalled());
-        Assert.assertTrue(primary2.wasCalled());
         Assert.assertEquals(123, result);
     }
 

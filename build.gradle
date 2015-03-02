@@ -6,12 +6,12 @@ plugins {
     id 'com.github.hierynomus.license' version '0.11.0'
 }
 
-group = 'com.github.lukaszbudnik.gugis'
-archivesBaseName = 'gugis'
-version = '1.0'
+group = 'com.github.lukaszbudnik.gugis-rx'
+archivesBaseName = 'gugis-rx'
+version = '0.5'
 
-sourceCompatibility = JavaVersion.VERSION_1_8
-targetCompatibility = JavaVersion.VERSION_1_8
+sourceCompatibility = JavaVersion.VERSION_1_6
+targetCompatibility = JavaVersion.VERSION_1_6
 
 repositories {
     mavenCentral()
@@ -43,8 +43,10 @@ dependencies {
     compile 'org.projectlombok:lombok:1.14.8'
     compile 'com.google.inject:guice:3.0'
     compile 'com.google.inject.extensions:guice-multibindings:3.0'
+    compile 'com.google.guava:guava:18.0'
     compile 'commons-beanutils:commons-beanutils:1.9.2'
     compile 'org.atteo.classindex:classindex:3.3'
+    compile 'com.netflix.rxjava:rxjava-core:0.20.7'
 
     testCompile 'org.apache.onami:org.apache.onami.test:1.4.0-incubating'
     testCompile 'junit:junit:4.12'
@@ -110,16 +112,16 @@ uploadArchives {
             }
 
             pom.project {
-                name 'gugis'
+                name 'gugis-rx'
                 packaging 'jar'
                 // optionally artifactId can be defined here
-                description 'Lightweight and robust framework for creating composite components using Guice.'
-                url 'https://github.com/lukaszbudnik/gugis'
+                description 'Guice and RxJava-based lightweight and robust framework for creating composite components.'
+                url 'https://github.com/lukaszbudnik/gugis-rx'
 
                 scm {
-                    connection 'scm:git:git@github.com:lukaszbudnik/gugis.git'
-                    developerConnection 'scm:git:git@github.com:lukaszbudnik/gugis.git'
-                    url 'git@github.com:lukaszbudnik/gugis.git'
+                    connection 'scm:git:git@github.com:lukaszbudnik/gugis-rx.git'
+                    developerConnection 'scm:git:git@github.com:lukaszbudnik/gugis-rx.git'
+                    url 'git@github.com:lukaszbudnik/gugis-rx.git'
                 }
 
                 licenses {

@@ -9,8 +9,11 @@
  */
 package com.github.lukaszbudnik.gugis;
 
+import com.google.common.base.Function;
+import com.google.common.base.Predicate;
+import com.google.common.collect.FluentIterable;
+
 import java.util.List;
-import java.util.stream.Collectors;
 
 public final class ErrorMessageBuilder {
 
@@ -27,8 +30,18 @@ public final class ErrorMessageBuilder {
     }
 
     public static String buildErrorMessageFromTries(String prefix, List<Try<Object>> tries) {
-        return buildErrorMessageFromStrings(prefix,
-                tries.stream().filter(t -> t.isFailure()).map(t -> t.failure().toString()).collect(Collectors.toList()));
+        List<String> errors = FluentIterable.from(tries).filter(new Predicate<Try<Object>>() {
+            @Override
+            public boolean apply(Try<Object> input) {
+                return input.isFailure();
+            }
+        }).transform(new Function<Try<Object>, String>() {
+            @Override
+            public String apply(Try<Object> input) {
+                return input.failure().toString();
+            }
+        }).toList();
+        return buildErrorMessageFromStrings(prefix, errors);
     }
 
 }

@@ -1,43 +1,24 @@
-gugis [![Build Status](https://travis-ci.org/lukaszbudnik/gugis.svg?branch=master)](https://travis-ci.org/lukaszbudnik/gugis) [![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.github.lukaszbudnik.gugis/gugis/badge.svg?style=flat)](https://maven-badges.herokuapp.com/maven-central/com.github.lukaszbudnik.gugis/gugis)
+Gugis-Rx [![Build Status](https://travis-ci.org/lukaszbudnik/gugis-rx.svg?branch=master)](https://travis-ci.org/lukaszbudnik/gugis-rx) [![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.github.lukaszbudnik.gugis/gugis-rx/badge.svg?style=flat)](https://maven-badges.herokuapp.com/maven-central/com.github.lukaszbudnik.gugis/gugis-rx)
 ==============================
 
-Lightweight and robust framework for creating composite components using Guice.
+Gugis-Rx is a lightweight and robust framework for creating composite components using Guice.
 
-Gugis automatically binds multiple implementations of the same interface to a composite component. When a call to composite component is being made Gugis automatically calls all found implementations. Gugis defines two types of implementations: primary and secondary. A typical use case would be disaster recovery where write operations (create, update, delete) would be routed to all implementations, other operations would be routed to only primaries, some to secondaries, and some operations (like read operations) may be routed to any implementation. See getting started for more information.
+Gugis-Rx uses Guava and RxJava and works on Java 6+ (Travis runs tests against: openjdk6, openjdk7, oraclejdk7, and oraclejdk8).
 
-# Getting started
+The original [Gugis](https://github.com/lukaszbudnik/gugis) uses Java 8 parallel streams and is much faster.
+However, as it requires Java 8, it may not be suitable for applications which still run on older Java versions.
 
-Let's assume we have a `StorageService` interface. It has two implementations `StorageService1Impl` and `StorageService2Impl`. Let's pretend that the first implementation uses Amazon S3 and the other one uses Rackspace Cloud Files.
+# Gugis and Gugis-Rx difference
 
-## Primary and secondary
+Gugis-Rx uses RxJava which does not offer parallel `Observable`. Because of this Gugis-Rx does
+not offer `Propagation.FASTEST`. The original Gugis unit tests `BasicTest.shouldPropagateToFastest()` and
+`ErrorHandlingTest.shouldSelectSlowerBecauseFasterThrowsException()` were commented out.
+When/if RxJava will support parallel processing then support for `Propagation.FASTEST` will be also ported to Gugis-Rx.
 
-Gugis comes with `@Primary` and `@Secondary` annotations so that we can differentiate our implementations and theirs roles. `@Primary` can be added to `StorageService2Impl` and `@Secondary` can be added to `StorageService1Impl`. Please also note that there can be multiple implementations marked with either `@Primary` or `@Secondary`.
+# Gugis-Rx
 
-## Composite component
-
-The last step is to create a composite component. For this we need to create another implementation of `StorageService` interface called `CompositeStorageService` and mark it with `@Composite` annotation. This implementation can have all methods' bodies empty - those methods will never be called. Instead Gugis will intercept all calls and route them to proper implementation(s).
-
-How Gugis knows what method calls should be routed to what component(s)? Each method we want to be intercepted and routed needs to be marked with `@Propagate` annotation. This annotation has one parameter which can control propagation behaviour. Currently the following propagation bahaviour is supported:
-
-* `@Propagate(propagation = Propagation.ALL)` - method call will be routed to all primaries and all secondaries
-* `@Propagate(propagation = Propagation.PRIMARY)` - method call will be routed to all primaries
-* `@Propagate(propagation = Propagation.SECONDARY)` - method call will be routed to all secondaries
-* `@Propagate(propagation = Propagation.FASTEST)` - method call will be routed to all implementations (just like in `ALL`), but the processing will finish as soon as first implementation finishes
-* `@Propagate(propagation = Propagation.RANDOM)` - method call will be routed to random implementation, either primary or secondary
-
-## Error handling
-
-Gugis is using Guice interceptor and all caught exceptions are wrapped with `GugisException` (runtime exception) which in turn wraps `InvocationTargetException` (thrown by Java reflection API). As `GugisException` is a runtime exception it needs to be explicitly added to `try/catch` block.
-
-By default Gugis fails when any matching implementation throws an exception. This default behaviour can be changed. Gugis can be configured to complete a composite call even when some of matching implementations throw exceptions. However there must be at least one call that succeeds. This can be done by setting `@Propagate`'s parameter `allowFailure` to `true`. See `src/test/java` for more details.
-
-## Setup
-
-When creating an injector using `Guice.createInjector()` we need to tell Guice to use `GugisModule.`
-
-Gugis automatically scans classpath for classes marked with `@Composite` annotation. If you need more complex setup you can disable autodiscovery by setting `autodiscovery` parameter to `false`. See unit tests for how to disable autodiscovery and use manual discovery instead.
-
-After that all you have to do is to inject `CompositeStorageService` class using for example `@Inject` annotation or programmatically using `injector.getInstance()`.
+Please refer to the original [Gugis](https://github.com/lukaszbudnik/gugis) documentation. With the exception of `Propagation.FASTEST`
+both implementations are compatible.
 
 # Examples
 
@@ -50,16 +31,16 @@ Use the following Maven dependency:
 ```xml
 <dependency>
   <groupId>com.github.lukaszbudnik.gugis</groupId>
-  <artifactId>gugis</artifactId>
+  <artifactId>gugis-rx</artifactId>
   <version>{version}</version>
 </dependency>
 ```
 
-or open [search.maven.org](http://search.maven.org/#search|ga|1|com.github.lukaszbudnik.gugis) and copy and paste dependency id for your favourite dependency management tool (Gradle (gugis uses Gradle), Buildr, Ivy, sbt, Leiningen, etc).
+or open [search.maven.org](http://search.maven.org/#search|ga|1|com.github.lukaszbudnik.gugis) and copy and paste dependency id for your favourite dependency management tool (Gradle, Buildr, Ivy, sbt, Leiningen, etc).
 
 # Road map
 
-Road map can be viewed on [milestones](https://github.com/lukaszbudnik/gugis/milestones) page.
+Road map (shared with the original Gugis project) can be viewed on [milestones](https://github.com/lukaszbudnik/gugis/milestones) page.
 
 # License
 

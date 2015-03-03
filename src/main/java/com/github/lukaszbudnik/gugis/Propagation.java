@@ -13,6 +13,6 @@ public enum Propagation {
     ALL, // ALL = all primaries and all secondaries
     PRIMARY, // PRIMARY = all primaries
     SECONDARY, // SECONDARY = all secondaries
-    FASTEST, // FASTEST = will start all, but stream processing will finish as soon as first implementation finishes
+    // FASTEST, // FASTEST = will start all, but stream processing will finish as soon as first implementation finishes
     RANDOM // RANDOM = random instance will be called (either primary or secondary), good for reads
 }

@@ -34,11 +34,11 @@ public class QueueServiceComposite implements QueueService {
     public void delete(String item) {
     }
 
-    @Propagate(propagation = Propagation.FASTEST, allowFailure = true)
-    @Override
-    public int stats() {
-        return 0;
-    }
+//    @Propagate(propagation = Propagation.FASTEST, allowFailure = true)
+//    @Override
+//    public int stats() {
+//        return 0;
+//    }
 
     @Propagate(propagation = Propagation.RANDOM, allowFailure = true)
     @Override

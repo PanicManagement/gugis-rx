@@ -31,11 +31,11 @@ public class StorageServiceComposite implements StorageService {
         return null;
     }
 
-    @Propagate(propagation = Propagation.FASTEST)
-    @Override
-    public String fastGet(int id) {
-        return null;
-    }
+//    @Propagate(propagation = Propagation.FASTEST)
+//    @Override
+//    public String fastGet(int id) {
+//        return null;
+//    }
 
     @Propagate(propagation = Propagation.SECONDARY)
     @Override

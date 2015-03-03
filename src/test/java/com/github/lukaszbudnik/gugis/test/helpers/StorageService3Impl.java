@@ -37,16 +37,16 @@ public class StorageService3Impl extends AbstractTestService implements StorageS
         return "null 3";
     }
 
-    @Override
-    public String fastGet(int id) {
-        log.trace(this.getClass().getSimpleName() + ".fastGet = " + id);
-        try {
-            Thread.sleep(500);
-        } catch (InterruptedException e) {
-        }
-        called();
-        return "null 3 - the fastest";
-    }
+//    @Override
+//    public String fastGet(int id) {
+//        log.trace(this.getClass().getSimpleName() + ".fastGet = " + id);
+//        try {
+//            Thread.sleep(500);
+//        } catch (InterruptedException e) {
+//        }
+//        called();
+//        return "null 3 - the fastest";
+//    }
 
     @Override
     public void refresh(int id) {

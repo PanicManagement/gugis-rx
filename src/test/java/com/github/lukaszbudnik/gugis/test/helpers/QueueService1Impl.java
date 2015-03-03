@@ -39,16 +39,16 @@ public class QueueService1Impl extends AbstractTestService implements QueueServi
         throw new RuntimeException(this.getClass().getSimpleName() + " exception in delete!");
     }
 
-    @Override
-    public int stats() {
-        try {
-            Thread.sleep(200);
-        } catch (InterruptedException e) {
-        }
-        log.trace("stats");
-        called();
-        return 123;
-    }
+//    @Override
+//    public int stats() {
+//        try {
+//            Thread.sleep(200);
+//        } catch (InterruptedException e) {
+//        }
+//        log.trace("stats");
+//        called();
+//        return 123;
+//    }
 
     @Override
     public String permissions() {

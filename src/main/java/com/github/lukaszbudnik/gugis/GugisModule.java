@@ -10,18 +10,22 @@
 package com.github.lukaszbudnik.gugis;
 
 
+import com.google.common.base.Function;
+import com.google.common.base.Predicate;
+import com.google.common.collect.FluentIterable;
+import com.google.common.reflect.ClassPath;
 import com.google.inject.AbstractModule;
 import com.google.inject.matcher.Matchers;
 import com.google.inject.multibindings.Multibinder;
 import lombok.extern.slf4j.Slf4j;
-import org.atteo.classindex.ClassIndex;
+import rx.Observable;
+import rx.functions.Func1;
 
+import java.io.IOException;
 import java.lang.annotation.Annotation;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
 
 @Slf4j
 public class GugisModule extends AbstractModule {
@@ -38,13 +42,15 @@ public class GugisModule extends AbstractModule {
 
     @Override
     protected void configure() {
-        GugisReplicatorInterceptor gugisReplicatorInterceptor = new GugisReplicatorInterceptor();
-        requestInjection(gugisReplicatorInterceptor);
-        bindInterceptor(Matchers.any(), Matchers.annotatedWith(Propagate.class), gugisReplicatorInterceptor);
+        GugisInterceptor gugisInterceptor = new GugisInterceptor();
+        requestInjection(gugisInterceptor);
+        bindInterceptor(Matchers.any(), Matchers.annotatedWith(Propagate.class), gugisInterceptor);
 
         List<String> validationErrors = new ArrayList<String>();
 
-        for (Class<?> compositeClass : ClassIndex.getAnnotated(Composite.class)) {
+        List<Class<?>> compositeClasses = getClassesAnnotatedWith(Composite.class);
+
+        for (Class<?> compositeClass : compositeClasses) {
             Composite compositeAnnotation = compositeClass.getAnnotation(Composite.class);
             if (!compositeAnnotation.autodiscover()) {
                 if (log.isDebugEnabled()) {
@@ -94,32 +100,66 @@ public class GugisModule extends AbstractModule {
 
     }
 
-    private List<String> getMethodsMarkedWithPropagation(Class<?> compositeClass, Propagation propagation) {
-        return Stream.of(compositeClass.getMethods())
-                .filter(m -> {
-                    Propagate propagate = m.getAnnotation(Propagate.class);
-                    if (propagate == null) {
+    private List<Class<?>> getClassesAnnotatedWith(final Class<? extends Annotation> annotationClass) {
+        List<Class<?>> foundClasses;
+        try {
+            foundClasses = FluentIterable.from(ClassPath.from(this.getClass().getClassLoader()).getAllClasses()).filter(new Predicate<ClassPath.ClassInfo>() {
+                @Override
+                public boolean apply(ClassPath.ClassInfo input) {
+                    try {
+                        return input.load().isAnnotationPresent(annotationClass);
+                    } catch (Throwable t) {
                         return false;
                     }
-                    if (propagate.propagation() == propagation) {
-                        return true;
-                    }
-                    return false;
-                })
-                .map(m -> m.toString().replace(compositeClass.getCanonicalName() + ".", ""))
-                .collect(Collectors.toList());
+                }
+            }).transform(new Function<ClassPath.ClassInfo, Class<?>>() {
+                @Override
+                public Class<?> apply(ClassPath.ClassInfo input) {
+                    return input.load();
+                }
+            }).toList();
+        } catch (IOException e) {
+            throw new GugisCreationException("Could not load classes ", e);
+        }
+        return foundClasses;
     }
 
-    private long bind(Multibinder multibinder, Class<?> classInterface, Class<? extends Annotation> annotation) {
-        return StreamSupport.stream(ClassIndex.getAnnotated(annotation).spliterator(), true)
-                .filter(c -> classInterface.isAssignableFrom(c))
-                .map(c -> {
-                    if (log.isDebugEnabled()) {
-                        log.debug("Binding " + c + " to " + classInterface);
-                    }
-                    multibinder.addBinding().to(c);
-                    return true;
-                })
-                .count();
+    private List<String> getMethodsMarkedWithPropagation(final Class<?> compositeClass, final Propagation propagation) {
+        return FluentIterable.of(compositeClass.getMethods()).filter(new Predicate<Method>() {
+            @Override
+            public boolean apply(Method input) {
+                Propagate propagate = input.getAnnotation(Propagate.class);
+                if (propagate == null) {
+                    return false;
+                }
+                return propagate.propagation() == propagation;
+            }
+        }).transform(new Function<Method, String>() {
+            @Override
+            public String apply(Method input) {
+                return input.toString().replace(compositeClass.getCanonicalName() + ".", "");
+            }
+        }).toList();
+    }
+
+    private long bind(final Multibinder multibinder, final Class<?> classInterface, Class<? extends Annotation> annotation) {
+
+        List<Class<?>> annotatedClasses = getClassesAnnotatedWith(annotation);
+
+        return Observable.from(annotatedClasses).filter(new Func1<Class<?>, Boolean>() {
+            @Override
+            public Boolean call(Class<?> c) {
+                return classInterface.isAssignableFrom(c);
+            }
+        }).map(new Func1<Class<?>, Boolean>() {
+            @Override
+            public Boolean call(Class<?> c) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Binding " + c + " to " + classInterface);
+                }
+                multibinder.addBinding().to(c);
+                return true;
+            }
+        }).count().toBlocking().first();
     }
 }

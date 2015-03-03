@@ -40,12 +40,12 @@ public class QueueService2Impl extends AbstractTestService implements QueueServi
         throw new IllegalArgumentException(this.getClass().getSimpleName() + " exception in delete!");
     }
 
-    @Override
-    public int stats() {
-        log.trace("stats");
-        called();
-        throw new RuntimeException(this.getClass().getCanonicalName());
-    }
+//    @Override
+//    public int stats() {
+//        log.trace("stats");
+//        called();
+//        throw new RuntimeException(this.getClass().getCanonicalName());
+//    }
 
     @Override
     public String permissions() {

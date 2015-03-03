@@ -10,10 +10,11 @@ However, as it requires Java 8, it may not be suitable for applications which st
 
 # Gugis and Gugis-Rx difference
 
-Gugis-Rx uses RxJava which does not offer parallel `Observable`. Because of this Gugis-Rx does
-not offer `Propagation.FASTEST`. The original Gugis unit tests `BasicTest.shouldPropagateToFastest()` and
+Gugis-Rx uses RxJava which does not offer parallel `Observable`. Because of this Gugis-Rx is sequential and is much slower then the original [Gugis](https://github.com/lukaszbudnik/gugis) implementation.
+
+Because Gugis-Rx is sequential it does not offer `Propagation.FASTEST`. The original Gugis unit tests `BasicTest.shouldPropagateToFastest()` and
 `ErrorHandlingTest.shouldSelectSlowerBecauseFasterThrowsException()` were commented out.
-When/if RxJava will support parallel processing then support for `Propagation.FASTEST` will be also ported to Gugis-Rx.
+When/if RxJava will support parallel processing then support for `Propagation.FASTEST` will be ported to Gugis-Rx (and hopefully it will also be fast).
 
 # Gugis-Rx
 

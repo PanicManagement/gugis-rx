@@ -13,4 +13,8 @@ public class GugisCreationException extends RuntimeException {
     public GugisCreationException(String message) {
         super(message);
     }
+
+    public GugisCreationException(String s, Throwable t) {
+        super(s, t);
+    }
 }

@@ -114,20 +114,20 @@ public class ErrorHandlingTest {
         }
     }
 
-    @Test
-    public void shouldSelectSlowerBecauseFasterThrowsException() {
-        Assert.assertFalse(primary1.wasCalled());
-        Assert.assertFalse(primary2.wasCalled());
-
-        // QueueService1Impl is slow (Thread.sleep) but passes
-        // QueueService2Impl is fast but throws exception
-        // stats has allowFailure set to true it should pass
-        // and return value from QueueService1Impl
-        int result = queueServiceComposite.stats();
-
-        Assert.assertTrue(primary1.wasCalled());
-        Assert.assertEquals(123, result);
-    }
+//    @Test
+//    public void shouldSelectSlowerBecauseFasterThrowsException() {
+//        Assert.assertFalse(primary1.wasCalled());
+//        Assert.assertFalse(primary2.wasCalled());
+//
+//        // QueueService1Impl is slow (Thread.sleep) but passes
+//        // QueueService2Impl is fast but throws exception
+//        // stats has allowFailure set to true it should pass
+//        // and return value from QueueService1Impl
+//        int result = queueServiceComposite.stats();
+//
+//        Assert.assertTrue(primary1.wasCalled());
+//        Assert.assertEquals(123, result);
+//    }
 
     @Test
     public void shouldSelectAlwaysFirstImplAsSecondThrowsException() {

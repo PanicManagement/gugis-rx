@@ -37,16 +37,16 @@ public class StorageService1Impl extends AbstractTestService implements StorageS
         return "null 1";
     }
 
-    @Override
-    public String fastGet(int id) {
-        log.trace(this.getClass().getSimpleName() + ".fastGet = " + id);
-        try {
-            Thread.sleep(1500);
-        } catch (InterruptedException e) {
-        }
-        called();
-        return "null 1";
-    }
+//    @Override
+//    public String fastGet(int id) {
+//        log.trace(this.getClass().getSimpleName() + ".fastGet = " + id);
+//        try {
+//            Thread.sleep(2500);
+//        } catch (InterruptedException e) {
+//        }
+//        called();
+//        return "null 1";
+//    }
 
     @Override
     public void refresh(int id) {

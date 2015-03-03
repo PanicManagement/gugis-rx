@@ -9,6 +9,8 @@
  */
 package com.github.lukaszbudnik.gugis;
 
+import com.google.common.base.Predicate;
+import com.google.common.collect.FluentIterable;
 import com.google.inject.Binding;
 import com.google.inject.Injector;
 import com.google.inject.TypeLiteral;
@@ -29,7 +31,7 @@ import java.util.List;
 import java.util.Random;
 
 @Slf4j
-public class GugisReplicatorInterceptor implements MethodInterceptor {
+public class GugisInterceptor implements MethodInterceptor {
 
     @Inject
     private Injector injector;
@@ -66,17 +68,12 @@ public class GugisReplicatorInterceptor implements MethodInterceptor {
 
         Observable<Try<Object>> resultsObservable = null;
         switch (propagate.propagation()) {
-            case FASTEST: {
-                Observable<Binding<Object>> bindingsObservable = Observable.from(bindings);
-                Observable<Try<Object>> executedObservable = executeBindings(propagate.allowFailure(), bindingsObservable, i.getMethod().getName(), i.getArguments());
-                resultsObservable = executedObservable.first(new Func1<Try<Object>, Boolean>() {
-                    @Override
-                    public Boolean call(Try<Object> objectTry) {
-                        return objectTry.isSuccess();
-                    }
-                });
-                break;
-            }
+//            case FASTEST: {
+//                Observable<Binding<Object>> bindingsObservable = Observable.from(bindings);
+//                Observable<Try<Object>> executedObservable = executeBindings(propagate.allowFailure(), bindingsObservable, i.getMethod().getName(), i.getArguments());
+//                resultsObservable = executedObservable.debounce(5, TimeUnit.MILLISECONDS);
+//                break;
+//            }
             case PRIMARY: {
                 resultsObservable = executeRxBindingsForRole(i, bindings, propagate.allowFailure(), Primary.class);
                 break;
@@ -92,15 +89,10 @@ public class GugisReplicatorInterceptor implements MethodInterceptor {
                     Observable<Binding<Object>> bindingsObservable = Observable.just(binding);
                     Observable<Try<Object>> executedObservable = executeBindings(propagate.allowFailure(), bindingsObservable, i.getMethod().getName(), i.getArguments());
 
-                    Boolean exists = executedObservable.exists(new Func1<Try<Object>, Boolean>() {
-                        @Override
-                        public Boolean call(Try<Object> objectTry) {
-                            return objectTry.isSuccess();
-                        }
-                    }).toBlocking().first();
+                    Try<Object> tryObject = executedObservable.toBlocking().first();
 
-                    if (exists) {
-                        resultsObservable = executedObservable;
+                    if (tryObject.isSuccess()) {
+                        resultsObservable = Observable.just(tryObject);
                         break;
                     }
                 }
@@ -114,33 +106,33 @@ public class GugisReplicatorInterceptor implements MethodInterceptor {
             }
         }
 
-            Observable<Try<Object>> successes = resultsObservable.filter(new Func1<Try<Object>, Boolean>() {
-                @Override
-                public Boolean call(Try<Object> objectTry) {
-                    return objectTry.isSuccess();
-                }
-            });
+        List<Try<Object>> results = resultsObservable.toList().toBlocking().first();
 
-            Integer successesCount = successes.count().toBlocking().first();
-
-            if (successesCount == 0) {
-                String errorMessage = ErrorMessageBuilder.buildErrorMessageFromObservableTries("No result for " + propagate.propagation() + " found for " + clazz.getCanonicalName() + "." + i.getMethod().getName(), resultsObservable);
-                throw new GugisException(errorMessage);
+        List<Try<Object>> successes = FluentIterable.from(results).filter(new Predicate<Try<Object>>() {
+            @Override
+            public boolean apply(Try<Object> input) {
+                return input.isSuccess();
             }
+        }).toList();
 
-            // all implementations should be homogeneous and should return same value for same arguments
-            Try<Object> tryObject = successes.toBlocking().first();
+        if (successes.size() == 0) {
+            String errorMessage = ErrorMessageBuilder.buildErrorMessageFromTries("No result for " + propagate.propagation() + " found for " + clazz.getCanonicalName() + "." + i.getMethod().getName(), results);
+            throw new GugisException(errorMessage);
+        }
 
-            if (log.isDebugEnabled()) {
-                log.debug("Method " + i.getMethod() + " returns " + tryObject.get());
-            }
+        // all implementations should be homogeneous and should return same value for same arguments
+        Try<Object> tryObject = successes.get(0);
 
-            return tryObject.get();
+        if (log.isDebugEnabled()) {
+            log.debug("Method " + i.getMethod() + " returns " + tryObject.get());
+        }
+
+        return tryObject.get();
     }
 
     public Observable<Try<Object>> executeBindings(final boolean allowFailure, Observable<Binding<Object>> bindings, final String methodName, final Object[] arguments) {
 
-        Observable<Try<Object>> executedBindingsObservable = bindings.subscribeOn(Schedulers.computation()).map(new Func1<Binding<Object>, Try<Object>>() {
+        Observable<Try<Object>> executedBindingsObservable = bindings.subscribeOn(Schedulers.newThread()).map(new Func1<Binding<Object>, Try<Object>>() {
             @Override
             public Try<Object> call(Binding<Object> binding) {
                 try {

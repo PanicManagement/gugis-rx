@@ -44,9 +44,8 @@ dependencies {
     compile 'com.google.inject:guice:3.0'
     compile 'com.google.inject.extensions:guice-multibindings:3.0'
     compile 'com.google.guava:guava:18.0'
-    compile 'commons-beanutils:commons-beanutils:1.9.2'
-    compile 'org.atteo.classindex:classindex:3.3'
     compile 'com.netflix.rxjava:rxjava-core:0.20.7'
+    compile 'commons-beanutils:commons-beanutils:1.9.2'
 
     testCompile 'org.apache.onami:org.apache.onami.test:1.4.0-incubating'
     testCompile 'junit:junit:4.12'

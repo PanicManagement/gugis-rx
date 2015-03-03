@@ -12,7 +12,6 @@ package com.github.lukaszbudnik.gugis;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.FluentIterable;
-import rx.Observable;
 
 import java.util.List;
 
@@ -43,10 +42,6 @@ public final class ErrorMessageBuilder {
             }
         }).toList();
         return buildErrorMessageFromStrings(prefix, errors);
-    }
-
-    public static String buildErrorMessageFromObservableTries(String prefix, Observable<Try<Object>> tries) {
-        return buildErrorMessageFromTries(prefix, tries.toList().toBlocking().first());
     }
 
 }

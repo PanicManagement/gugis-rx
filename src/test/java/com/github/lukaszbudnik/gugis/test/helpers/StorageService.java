@@ -15,7 +15,7 @@ public interface StorageService {
 
     String get(int id);
 
-    String fastGet(int id);
+//    String fastGet(int id);
 
     void refresh(int id);
 
